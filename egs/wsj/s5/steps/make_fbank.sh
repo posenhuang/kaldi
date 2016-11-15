@@ -6,10 +6,13 @@
 # see ../run.sh for example
 
 # Begin configuration section.
-nj=4
+nj=14
 cmd=run.pl
 fbank_config=conf/fbank.conf
+fbank_config=conf/fbank_40.conf
 compress=true
+add_delta=true
+splice_feats=false
 # End configuration section.
 
 echo "$0 $@"  # Print the command line for logging
@@ -108,13 +111,31 @@ else
   done
 
   utils/split_scp.pl $scp $split_scps || exit 1;
-
-  $cmd JOB=1:$nj $logdir/make_fbank_${name}.JOB.log \
+  if $add_delta && $splice_feats; then
+    echo "$0: add_delta and splice_feats"
+    $cmd JOB=1:$nj $logdir/make_fbank_${name}.JOB.log \
     compute-fbank-feats $vtln_opts --verbose=2 --config=$fbank_config scp,p:$logdir/wav.JOB.scp ark:- \| \
+    add-deltas ark:- ark:- \| \
+    splice-feats --left-context=5 --right-context=5 ark:- ark:- \| \
     copy-feats --compress=$compress ark:- \
      ark,scp:$fbankdir/raw_fbank_$name.JOB.ark,$fbankdir/raw_fbank_$name.JOB.scp \
      || exit 1;
-
+  elif $add_delta; then
+    echo "$0: add_delta"
+    $cmd JOB=1:$nj $logdir/make_fbank_${name}.JOB.log \
+    compute-fbank-feats $vtln_opts --verbose=2 --config=$fbank_config scp,p:$logdir/wav.JOB.scp ark:- \| \
+    add-deltas ark:- ark:- \| \
+    copy-feats --compress=$compress ark:- \
+     ark,scp:$fbankdir/raw_fbank_$name.JOB.ark,$fbankdir/raw_fbank_$name.JOB.scp \
+     || exit 1; 
+  else 
+    echo "$0: without add_delta, splice_feats" 
+    $cmd JOB=1:$nj $logdir/make_fbank_${name}.JOB.log \
+    compute-fbank-feats $vtln_opts --verbose=2 --config=$fbank_config scp,p:$logdir/wav.JOB.scp ark:- \| \
+    copy-feats --compress=$compress ark:- \
+     ark,scp:$fbankdir/raw_fbank_$name.JOB.ark,$fbankdir/raw_fbank_$name.JOB.scp \
+     || exit 1; 
+  fi
 fi
 
 
