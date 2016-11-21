@@ -126,7 +126,7 @@ else
     compute-fbank-feats $vtln_opts --verbose=2 --config=$fbank_config scp,p:$logdir/wav.JOB.scp ark:- \| \
     add-deltas ark:- ark:- \| \
     copy-feats --compress=$compress ark:- \
-     ark,scp:$fbankdir/raw_fbank_$name.JOB.ark,$fbankdir/raw_fbank_$name.JOB.scp \
+     ark,t,scp:$fbankdir/raw_fbank_$name.JOB.ark,$fbankdir/raw_fbank_$name.JOB.scp \
      || exit 1; 
   else 
     echo "$0: without add_delta, splice_feats" 
